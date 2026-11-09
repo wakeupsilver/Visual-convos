@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dreamscape</title>
+    <style>
+      :root {
+        --ink: #f6efe6;
+        --glass: rgba(20, 14, 44, 0.42);
+        --glass-on: rgba(255, 220, 160, 0.28);
+        --edge: rgba(255, 255, 255, 0.14);
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #0c0928;
+        color: var(--ink);
+        font-family: Georgia, 'Times New Roman', serif;
+        -webkit-tap-highlight-color: transparent;
+      }
+      canvas { display: block; position: fixed; inset: 0; touch-action: manipulation; }
+
+      .bar {
+        position: fixed;
+        left: 50%;
+        bottom: max(16px, env(safe-area-inset-bottom));
+        transform: translateX(-50%);
+        display: flex;
+        gap: 10px;
+        padding: 8px;
+        border-radius: 999px;
+        background: var(--glass);
+        border: 1px solid var(--edge);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        z-index: 5;
+      }
+      .bar button, .bar a {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--ink);
+        font-size: 22px;
+        line-height: 1;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        text-decoration: none;
+        transition: background .25s, transform .2s, border-color .25s, box-shadow .25s;
+      }
+      .bar button:hover, .bar a:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); }
+      .bar button:focus-visible, .bar a:focus-visible, .intro button:focus-visible { outline: 2px solid #ffd99a; outline-offset: 2px; }
+      .bar button.on {
+        background: var(--glass-on);
+        border-color: rgba(255, 220, 160, 0.5);
+        box-shadow: 0 0 18px rgba(255, 200, 120, 0.45);
+      }
+      #btn-listen.on { animation: breathe 1.6s ease-in-out infinite; }
+      @keyframes breathe { 50% { box-shadow: 0 0 30px rgba(255, 170, 110, 0.85); } }
+
+      .intro {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        z-index: 10;
+        background: radial-gradient(ellipse at 50% 60%, rgba(70, 30, 100, 0.55), rgba(8, 6, 26, 0.92));
+        transition: opacity 1.4s ease, visibility 1.4s;
+        padding: 16px;
+        text-align: center;
+      }
+      .intro.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+      .intro .orb { font-size: 64px; animation: float 4s ease-in-out infinite; filter: drop-shadow(0 0 24px rgba(255, 210, 150, .7)); }
+      .intro .pair { font-size: 34px; letter-spacing: 18px; margin: 10px 0 4px; }
+      .intro p { font-size: 18px; opacity: .8; margin: 6px 0 26px; font-style: italic; }
+      .intro .go { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+      .intro button {
+        font: inherit;
+        font-size: 17px;
+        color: var(--ink);
+        padding: 14px 24px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 220, 170, 0.45);
+        background: rgba(255, 200, 140, 0.12);
+        cursor: pointer;
+        transition: background .25s, transform .2s;
+      }
+      .intro button:hover { background: rgba(255, 200, 140, 0.26); transform: translateY(-2px); }
+      .intro small { display: block; margin-top: 26px; opacity: .55; font-size: 13px; max-width: 420px; line-height: 1.5; }
+      @keyframes float { 50% { transform: translateY(-10px); } }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        top: 18px;
+        transform: translate(-50%, -12px);
+        max-width: calc(100% - 32px);
+        padding: 10px 18px;
+        border-radius: 999px;
+        background: var(--glass);
+        border: 1px solid var(--edge);
+        backdrop-filter: blur(10px);
+        font-size: 14px;
+        opacity: 0;
+        transition: opacity .35s, transform .35s;
+        pointer-events: none;
+        z-index: 6;
+        text-align: center;
+      }
+      .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+      .type-form {
+        position: fixed;
+        left: 50%;
+        bottom: calc(max(16px, env(safe-area-inset-bottom)) + 74px);
+        transform: translate(-50%, 10px);
+        width: min(560px, calc(100% - 32px));
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity .3s, transform .3s, visibility .3s;
+        z-index: 5;
+      }
+      .type-form.open { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+      .type-form input {
+        width: 100%;
+        font: inherit;
+        font-size: 17px;
+        color: var(--ink);
+        padding: 14px 20px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 220, 170, 0.4);
+        background: var(--glass);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        outline: none;
+      }
+      .type-form input::placeholder { color: rgba(246, 239, 230, 0.55); }
+      .type-form input:focus { border-color: rgba(255, 220, 170, 0.8); box-shadow: 0 0 18px rgba(255, 200, 120, 0.3); }
+
+      @media (max-width: 480px) {
+        .bar { gap: 0; padding: 5px; }
+        .bar button, .bar a { width: 38px; height: 38px; font-size: 18px; }
+        .type-form { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 62px); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .intro .orb, #btn-listen.on { animation: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="dream" aria-label="A living picture of the conversation"></canvas>
+
+    <div class="intro" id="intro">
+      <div>
+        <div class="orb">✨</div>
+        <div class="pair">☀️🌙</div>
+        <p>Two voices. One dream.</p>
+        <div class="go">
+          <button id="intro-listen">🎙️ Begin</button>
+          <button id="intro-demo">▶ Watch a dream</button>
+        </div>
+        <small>Talk, and your words become pictures drifting in from your side.
+          Tap a side or press space to pass the voice between ☀️ and 🌙.
+          When you both say the same thing, it is planted in the garden.</small>
+      </div>
+    </div>
+
+    <nav class="bar" aria-label="Dream controls">
+      <button id="btn-listen" title="Listen" aria-label="Listen" aria-pressed="false">🎙️</button>
+      <button id="btn-type" title="Type instead of talking" aria-label="Type">⌨️</button>
+      <button id="btn-speaker" title="Who is speaking (space)" aria-label="Switch speaker">☀️</button>
+      <button id="btn-auto" title="Tell the voices apart by pitch (experimental)" aria-label="Automatic speaker detection" aria-pressed="false">🎭</button>
+      <button id="btn-paint" title="Let an AI paint the dream (sends keywords to pollinations.ai)" aria-label="AI painting" aria-pressed="false">🖌️</button>
+      <button id="btn-demo" title="Watch a dream" aria-label="Demo">▶</button>
+      <button id="btn-keep" title="Keep this dream as a picture" aria-label="Save picture">📷</button>
+    </nav>
+
+    <form class="type-form" id="type-form" autocomplete="off">
+      <input id="type-input" type="text" aria-label="Type what was said" enterkeyhint="send">
+    </form>
+
+    <div class="toast" id="toast" role="status"></div>
+
+    <script src="dream/lexicon.js"></script>
+    <script src="dream/dream.js"></script>
+  </body>
+</html>
